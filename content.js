@@ -42,14 +42,19 @@
     return null;
   }
 
-  // ── 3. Inject caption overlay into the page ────────────────────────────────
-  function injectOverlay() {
-    if (document.querySelector('.echo360-caption-overlay')) return; // already injected
+  // ── 3. Inject caption overlay into a VideoWrapper ──────────────────────────
+  function injectOverlay(wrapper) {
+    if (wrapper.querySelector('.echo360-caption-overlay')) return; // already injected
+
+    // VideoWrapper must be position:relative for absolute child to anchor correctly
+    if (getComputedStyle(wrapper).position === 'static') {
+      wrapper.style.position = 'relative';
+    }
 
     const overlay = document.createElement('div');
     overlay.className = 'echo360-caption-overlay';
     Object.assign(overlay.style, {
-      position:      'fixed',
+      position:      'absolute',
       bottom:        '8%',
       left:          '50%',
       transform:     'translateX(-50%)',
@@ -60,15 +65,15 @@
       lineHeight:    '1.4',
       padding:       '4px 10px',
       borderRadius:  '4px',
-      maxWidth:      '60%',
+      maxWidth:      '80%',
       textAlign:     'center',
       wordWrap:      'break-word',
-      pointerEvents: 'none',
-      zIndex:        '2147483647',
-      display:       'none',
+      pointerEvents: 'none',      // don't block click-to-play on the video
+      zIndex:        '10',
+      display:       'none',      // hidden until a cue matches
     });
 
-    document.body.appendChild(overlay);
+    wrapper.appendChild(overlay);
     overlays.push(overlay);
   }
 
@@ -121,14 +126,21 @@
   }
 
   // ── 5. MutationObserver to handle React async rendering ───────────────────
+  function injectFirstOverlay() {
+    const first = document.querySelector('[data-test-component="VideoWrapper"]');
+    if (first) injectOverlay(first);
+  }
+
   // ── 5. MutationObserver to handle React async rendering ───────────────────
   const observer = new MutationObserver(function () {
+    injectFirstOverlay();
     injectCCButton();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
 
-  injectOverlay();
+  // Also run immediately in case DOM is already present
+  injectFirstOverlay();
   injectCCButton();
 
   // ── 6. requestAnimationFrame loop ─────────────────────────────────────────
