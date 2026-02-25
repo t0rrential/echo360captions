@@ -126,16 +126,21 @@
   }
 
   // ── 5. MutationObserver to handle React async rendering ───────────────────
+  function injectFirstOverlay() {
+    const first = document.querySelector('[data-test-component="VideoWrapper"]');
+    if (first) injectOverlay(first);
+  }
+
+  // ── 5. MutationObserver to handle React async rendering ───────────────────
   const observer = new MutationObserver(function () {
-    document.querySelectorAll('[data-test-component="VideoWrapper"]')
-      .forEach(injectOverlay);
+    injectFirstOverlay();
     injectCCButton();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
 
   // Also run immediately in case DOM is already present
-  document.querySelectorAll('[data-test-component="VideoWrapper"]').forEach(injectOverlay);
+  injectFirstOverlay();
   injectCCButton();
 
   // ── 6. requestAnimationFrame loop ─────────────────────────────────────────
