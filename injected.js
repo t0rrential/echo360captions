@@ -1,21 +1,18 @@
 (function () {
-  const originalFetch = window.fetch;
+  const originalOpen = XMLHttpRequest.prototype.open;
 
-  window.fetch = function (...args) {
-    const promise = originalFetch.apply(this, args);
-    const url = args[0] instanceof Request ? args[0].url : String(args[0]);
-
-    if (url.includes('/transcript')) {
-      promise.then(function (response) {
-        response.clone().json().then(function (data) {
+  XMLHttpRequest.prototype.open = function (method, url) {
+    if (String(url).includes('/transcript')) {
+      this.addEventListener('load', function () {
+        try {
+          const data = JSON.parse(this.responseText);
           const cues = data?.data?.contentJSON?.cues;
           if (Array.isArray(cues)) {
             window.postMessage({ type: 'ECHO360_TRANSCRIPT', cues: cues }, '*');
           }
-        }).catch(function () {});
-      }).catch(function () {});
+        } catch (e) {}
+      });
     }
-
-    return promise;
+    return originalOpen.apply(this, arguments);
   };
 })();
