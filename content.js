@@ -33,7 +33,101 @@
     return null;
   }
 
-  // (DOM injection and rAF loop come in Tasks 4 and 5)
+  // ── 3. Inject caption overlay into a VideoWrapper ──────────────────────────
+  function injectOverlay(wrapper) {
+    if (wrapper.querySelector('.echo360-caption-overlay')) return; // already injected
+
+    // VideoWrapper must be position:relative for absolute child to anchor correctly
+    if (getComputedStyle(wrapper).position === 'static') {
+      wrapper.style.position = 'relative';
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'echo360-caption-overlay';
+    Object.assign(overlay.style, {
+      position:      'absolute',
+      bottom:        '8%',
+      left:          '50%',
+      transform:     'translateX(-50%)',
+      background:    'rgba(0,0,0,0.75)',
+      color:         '#ffffff',
+      fontFamily:    "'Proxima Nova', sans-serif",
+      fontSize:      '1rem',
+      lineHeight:    '1.4',
+      padding:       '4px 10px',
+      borderRadius:  '4px',
+      maxWidth:      '80%',
+      textAlign:     'center',
+      wordWrap:      'break-word',
+      pointerEvents: 'none',      // don't block click-to-play on the video
+      zIndex:        '10',
+      display:       'none',      // hidden until a cue matches
+    });
+
+    wrapper.appendChild(overlay);
+    overlays.push(overlay);
+  }
+
+  // ── 4. Inject CC toggle button into the player controls ────────────────────
+  function injectCCButton() {
+    if (document.getElementById('echo360-cc-btn')) return; // already injected
+
+    const transcriptBtn = document.querySelector('[data-testid="transcript-button"]');
+    if (!transcriptBtn) return; // controls not rendered yet
+
+    const btn = document.createElement('button');
+    btn.id            = 'echo360-cc-btn';
+    btn.type          = 'button';
+    btn.title         = 'Toggle Captions';
+    btn.textContent   = 'CC';
+    btn.setAttribute('aria-pressed', 'true');
+
+    // Mirror the visual style of neighboring icon buttons
+    const ref = getComputedStyle(transcriptBtn);
+    Object.assign(btn.style, {
+      background:     'transparent',
+      border:         'none',
+      color:          ref.color,
+      cursor:         'pointer',
+      fontSize:       '0.8rem',
+      fontWeight:     '700',
+      fontFamily:     ref.fontFamily,
+      height:         ref.height,
+      padding:        ref.padding,
+      display:        'inline-flex',
+      alignItems:     'center',
+      justifyContent: 'center',
+      borderRadius:   ref.borderRadius,
+      opacity:        '1',
+    });
+
+    btn.addEventListener('mouseenter', function () { btn.style.opacity = captionsEnabled ? '0.75' : '0.3'; });
+    btn.addEventListener('mouseleave', function () { btn.style.opacity = captionsEnabled ? '1' : '0.4'; });
+
+    btn.addEventListener('click', function () {
+      captionsEnabled = !captionsEnabled;
+      btn.setAttribute('aria-pressed', String(captionsEnabled));
+      btn.style.opacity = captionsEnabled ? '1' : '0.4';
+      if (!captionsEnabled) {
+        overlays.forEach(function (o) { o.style.display = 'none'; });
+      }
+    });
+
+    transcriptBtn.parentElement.insertBefore(btn, transcriptBtn);
+  }
+
+  // ── 5. MutationObserver to handle React async rendering ───────────────────
+  const observer = new MutationObserver(function () {
+    document.querySelectorAll('[data-test-component="VideoWrapper"]')
+      .forEach(injectOverlay);
+    injectCCButton();
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Also run immediately in case DOM is already present
+  document.querySelectorAll('[data-test-component="VideoWrapper"]').forEach(injectOverlay);
+  injectCCButton();
 
   function startCaptionLoop() {
     // placeholder — implemented in Task 5
