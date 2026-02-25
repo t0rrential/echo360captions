@@ -1,7 +1,7 @@
 (function () {
-  let cues = [];          // sorted array of {startMs, endMs, content}
-  let captionsEnabled = true;
-  const overlays = [];    // all injected overlay divs
+  let cues = [];
+  let activeOverlayIndex = 0;  // -1 = off, 0/1/... = which feed has captions
+  const overlays = [];
 
   // ── 0. Warn if no transcript arrives within 10 seconds ────────────────────
   const transcriptTimeout = setTimeout(function () {
@@ -44,9 +44,8 @@
 
   // ── 3. Inject caption overlay into a VideoWrapper ──────────────────────────
   function injectOverlay(wrapper) {
-    if (wrapper.querySelector('.echo360-caption-overlay')) return; // already injected
+    if (wrapper.querySelector('.echo360-caption-overlay')) return;
 
-    // VideoWrapper must be position:relative for absolute child to anchor correctly
     if (getComputedStyle(wrapper).position === 'static') {
       wrapper.style.position = 'relative';
     }
@@ -68,30 +67,37 @@
       maxWidth:      '80%',
       textAlign:     'center',
       wordWrap:      'break-word',
-      pointerEvents: 'none',      // don't block click-to-play on the video
+      pointerEvents: 'none',
       zIndex:        '10',
-      display:       'none',      // hidden until a cue matches
+      display:       'none',
     });
 
     wrapper.appendChild(overlay);
     overlays.push(overlay);
   }
 
-  // ── 4. Inject CC toggle button into the player controls ────────────────────
+  // ── 4. CC button ───────────────────────────────────────────────────────────
+  function updateCCButton(btn) {
+    const isOff = activeOverlayIndex === -1;
+    btn.setAttribute('aria-pressed', String(!isOff));
+    btn.style.opacity = isOff ? '0.4' : '1';
+    btn.textContent = (!isOff && overlays.length > 1)
+      ? 'CC ' + (activeOverlayIndex + 1)
+      : 'CC';
+  }
+
   function injectCCButton() {
-    if (document.getElementById('echo360-cc-btn')) return; // already injected
+    if (document.getElementById('echo360-cc-btn')) return;
 
     const transcriptBtn = document.querySelector('[data-testid="transcript-button"]');
-    if (!transcriptBtn) return; // controls not rendered yet
+    if (!transcriptBtn) return;
 
     const btn = document.createElement('button');
-    btn.id            = 'echo360-cc-btn';
-    btn.type          = 'button';
-    btn.title         = 'Toggle Captions';
-    btn.textContent   = 'CC';
+    btn.id   = 'echo360-cc-btn';
+    btn.type = 'button';
+    btn.title = 'Toggle Captions';
     btn.setAttribute('aria-pressed', 'true');
 
-    // Mirror the visual style of neighboring icon buttons
     const ref = getComputedStyle(transcriptBtn);
     Object.assign(btn.style, {
       background:     'transparent',
@@ -110,63 +116,86 @@
       opacity:        '1',
     });
 
-    btn.addEventListener('mouseenter', function () { btn.style.opacity = captionsEnabled ? '0.75' : '0.3'; });
-    btn.addEventListener('mouseleave', function () { btn.style.opacity = captionsEnabled ? '1' : '0.4'; });
-
-    btn.addEventListener('click', function () {
-      captionsEnabled = !captionsEnabled;
-      btn.setAttribute('aria-pressed', String(captionsEnabled));
-      btn.style.opacity = captionsEnabled ? '1' : '0.4';
-      if (!captionsEnabled) {
-        overlays.forEach(function (o) { o.style.display = 'none'; });
-      }
+    btn.addEventListener('mouseenter', function () {
+      btn.style.opacity = activeOverlayIndex === -1 ? '0.3' : '0.75';
+    });
+    btn.addEventListener('mouseleave', function () {
+      btn.style.opacity = activeOverlayIndex === -1 ? '0.4' : '1';
     });
 
+    btn.addEventListener('click', function () {
+      const total = overlays.length;
+      if (total === 0) return;
+
+      // Clear current active overlay
+      if (activeOverlayIndex >= 0 && overlays[activeOverlayIndex]) {
+        overlays[activeOverlayIndex].style.display = 'none';
+        overlays[activeOverlayIndex].textContent = '';
+      }
+
+      // Cycle: 0 → 1 → ... → (total-1) → -1 (off) → 0
+      if (activeOverlayIndex === -1) {
+        activeOverlayIndex = 0;
+      } else if (activeOverlayIndex < total - 1) {
+        activeOverlayIndex++;
+      } else {
+        activeOverlayIndex = -1;
+      }
+
+      updateCCButton(btn);
+    });
+
+    updateCCButton(btn);
     transcriptBtn.parentElement.insertBefore(btn, transcriptBtn);
   }
 
   // ── 5. MutationObserver to handle React async rendering ───────────────────
-  function injectFirstOverlay() {
-    const first = document.querySelector('[data-test-component="VideoWrapper"]');
-    if (first) injectOverlay(first);
-  }
-
-  // ── 5. MutationObserver to handle React async rendering ───────────────────
   const observer = new MutationObserver(function () {
-    injectFirstOverlay();
+    document.querySelectorAll('[data-test-component="VideoWrapper"]').forEach(injectOverlay);
     injectCCButton();
+    const btn = document.getElementById('echo360-cc-btn');
+    if (btn) updateCCButton(btn);
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
 
-  // Also run immediately in case DOM is already present
-  injectFirstOverlay();
+  document.querySelectorAll('[data-test-component="VideoWrapper"]').forEach(injectOverlay);
   injectCCButton();
 
   // ── 6. requestAnimationFrame loop ─────────────────────────────────────────
   function startCaptionLoop() {
     const leaderVideo = document.querySelector('video[data-test="leader"]');
     if (!leaderVideo) {
-      // Video not in DOM yet — wait and retry
       setTimeout(startCaptionLoop, 200);
       return;
     }
 
     let lastCueContent = null;
+    let lastActiveIndex = activeOverlayIndex;
 
     function tick() {
-      if (captionsEnabled && cues.length > 0) {
+      // If active feed changed, clear the old overlay
+      if (lastActiveIndex !== activeOverlayIndex) {
+        if (lastActiveIndex >= 0 && overlays[lastActiveIndex]) {
+          overlays[lastActiveIndex].style.display = 'none';
+          overlays[lastActiveIndex].textContent = '';
+        }
+        lastCueContent = null;
+        lastActiveIndex = activeOverlayIndex;
+      }
+
+      if (activeOverlayIndex >= 0 && cues.length > 0) {
         const timeMs = leaderVideo.currentTime * 1000;
         const cue = findCue(timeMs);
         const text = cue ? cue.content : '';
 
-        // Only update DOM when content changes — avoids unnecessary repaints
         if (text !== lastCueContent) {
           lastCueContent = text;
-          overlays.forEach(function (overlay) {
+          const overlay = overlays[activeOverlayIndex];
+          if (overlay) {
             overlay.textContent = text;
             overlay.style.display = text ? 'block' : 'none';
-          });
+          }
         }
       }
 
