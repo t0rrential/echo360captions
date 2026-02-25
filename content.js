@@ -151,10 +151,13 @@
 
   // ── 5. MutationObserver to handle React async rendering ───────────────────
   const observer = new MutationObserver(function () {
+    const prevCount = overlays.length;
     document.querySelectorAll('[data-test-component="VideoWrapper"]').forEach(injectOverlay);
     injectCCButton();
-    const btn = document.getElementById('echo360-cc-btn');
-    if (btn) updateCCButton(btn);
+    if (overlays.length !== prevCount) {
+      const btn = document.getElementById('echo360-cc-btn');
+      if (btn) updateCCButton(btn);
+    }
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
