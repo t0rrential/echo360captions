@@ -3,10 +3,19 @@
   let captionsEnabled = true;
   const overlays = [];    // all injected overlay divs
 
+  // ── 0. Warn if no transcript arrives within 10 seconds ────────────────────
+  const transcriptTimeout = setTimeout(function () {
+    if (cues.length === 0) {
+      console.log('[Echo360 Captions] No transcript received — lecture may not have one.');
+    }
+  }, 10000);
+
   // ── 1. Receive transcript cues ─────────────────────────────────────────────
   window.addEventListener('message', function (event) {
     if (event.source !== window) return;
     if (!event.data || event.data.type !== 'ECHO360_TRANSCRIPT') return;
+
+    clearTimeout(transcriptTimeout);
 
     cues = event.data.cues
       .filter(c => c.startMs != null && c.endMs != null && c.content)
