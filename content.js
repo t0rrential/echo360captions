@@ -81,9 +81,7 @@
     const isOff = activeOverlayIndex === -1;
     btn.setAttribute('aria-pressed', String(!isOff));
     btn.style.opacity = isOff ? '0.4' : '1';
-    btn.textContent = (!isOff && overlays.length > 1)
-      ? 'CC ' + (activeOverlayIndex + 1)
-      : 'CC';
+    btn.textContent = 'CC';
   }
 
   function injectCCButton() {
