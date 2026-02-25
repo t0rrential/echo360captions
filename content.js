@@ -129,8 +129,36 @@
   document.querySelectorAll('[data-test-component="VideoWrapper"]').forEach(injectOverlay);
   injectCCButton();
 
+  // ── 6. requestAnimationFrame loop ─────────────────────────────────────────
   function startCaptionLoop() {
-    // placeholder — implemented in Task 5
-    console.log('[Echo360 Captions] cues loaded:', cues.length);
+    const leaderVideo = document.querySelector('video[data-test="leader"]');
+    if (!leaderVideo) {
+      // Video not in DOM yet — wait and retry
+      setTimeout(startCaptionLoop, 200);
+      return;
+    }
+
+    let lastCueContent = null;
+
+    function tick() {
+      if (captionsEnabled && cues.length > 0) {
+        const timeMs = leaderVideo.currentTime * 1000;
+        const cue = findCue(timeMs);
+        const text = cue ? cue.content : '';
+
+        // Only update DOM when content changes — avoids unnecessary repaints
+        if (text !== lastCueContent) {
+          lastCueContent = text;
+          overlays.forEach(function (overlay) {
+            overlay.textContent = text;
+            overlay.style.display = text ? 'block' : 'none';
+          });
+        }
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
   }
 })();
