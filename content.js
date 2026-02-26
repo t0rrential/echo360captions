@@ -104,12 +104,17 @@
 
   // ── 6. Set the active overlay (single authoritative setter) ────────────────
   function setActiveOverlay(index) {
-    // Clear previously active overlay
+    // Clear previously active overlay and remove its movable state
     if (activeOverlayIndex >= 0 && overlays[activeOverlayIndex]) {
       overlays[activeOverlayIndex].style.display = 'none';
       overlays[activeOverlayIndex].textContent = '';
+      disableMovable(overlays[activeOverlayIndex]);
     }
     activeOverlayIndex = index;
+    // Re-apply movable state to the newly active overlay
+    if (isMovable && index >= 0 && overlays[index]) {
+      enableMovable(overlays[index]);
+    }
     var btn = document.getElementById('echo360-cc-btn');
     if (btn) updateCCButton(btn);
   }
@@ -688,6 +693,7 @@
     // Disconnected overlays mean the VideoWrapper tree was replaced (layout switch).
     if (overlays.length > 0 && overlays.some(function (o) { return !o.isConnected; })) {
       overlays.length = 0;
+      captionMoved.length = 0;
       activeOverlayIndex = 0;
       userChose = false;  // layout changed — let spotlight auto-select again
       hideCCMenu();
