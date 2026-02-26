@@ -1,4 +1,4 @@
-# 360transcript
+# echo360captions
 
 takes the transcript and turns it into closed captioning under a video feed.
 
