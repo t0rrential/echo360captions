@@ -694,6 +694,7 @@
     if (overlays.length > 0 && overlays.some(function (o) { return !o.isConnected; })) {
       overlays.length = 0;
       captionMoved.length = 0;
+      isMovable = false;
       activeOverlayIndex = 0;
       userChose = false;  // layout changed — let spotlight auto-select again
       hideCCMenu();
