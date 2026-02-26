@@ -412,6 +412,116 @@
     return li;
   }
 
+  function buildMovableItem(theme, triggerBtn) {
+    var li = document.createElement('li');
+    li.setAttribute('role', 'none');
+
+    var btn = document.createElement('button');
+    btn.setAttribute('role', 'menuitem');
+    btn.type = 'button';
+    Object.assign(btn.style, {
+      display:        'flex',
+      alignItems:     'center',
+      gap:            '8px',
+      width:          '100%',
+      padding:        '8px 14px',
+      background:     isMovable ? 'rgba(255,255,255,0.1)' : 'transparent',
+      color:          theme.color,
+      border:         'none',
+      borderLeft:     isMovable ? '2px solid #5eb3e4' : '2px solid transparent',
+      fontFamily:     'inherit',
+      fontSize:       '0.85rem',
+      cursor:         'pointer',
+      textAlign:      'left',
+      whiteSpace:     'nowrap',
+    });
+
+    var icon = document.createElement('span');
+    icon.textContent = isMovable ? '🔓' : '🔒';
+    icon.setAttribute('aria-hidden', 'true');
+
+    var text = document.createElement('span');
+    text.textContent = 'Movable';
+
+    btn.appendChild(icon);
+    btn.appendChild(text);
+
+    btn.addEventListener('mouseenter', function () {
+      if (!isMovable) btn.style.background = 'rgba(255,255,255,0.06)';
+    });
+    btn.addEventListener('mouseleave', function () {
+      if (!isMovable) btn.style.background = 'transparent';
+    });
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      isMovable = !isMovable;
+      var activeOverlay = overlays[activeOverlayIndex];
+      if (isMovable) {
+        enableMovable(activeOverlay);
+      } else {
+        disableMovable(activeOverlay);
+      }
+      hideCCMenu();
+      showCCMenu(triggerBtn);   // re-open so icon/Reset updates immediately
+    });
+
+    li.appendChild(btn);
+    return li;
+  }
+
+  function buildResetItem(theme) {
+    var li = document.createElement('li');
+    li.setAttribute('role', 'none');
+
+    var btn = document.createElement('button');
+    btn.setAttribute('role', 'menuitem');
+    btn.type = 'button';
+    Object.assign(btn.style, {
+      display:        'flex',
+      alignItems:     'center',
+      gap:            '8px',
+      width:          '100%',
+      padding:        '6px 14px 6px 32px',
+      background:     'transparent',
+      color:          theme.color,
+      border:         'none',
+      borderLeft:     '2px solid transparent',
+      fontFamily:     'inherit',
+      fontSize:       '0.8rem',
+      cursor:         'pointer',
+      textAlign:      'left',
+      whiteSpace:     'nowrap',
+      opacity:        '0.85',
+    });
+
+    var arrow = document.createElement('span');
+    arrow.textContent = '↺';
+    arrow.setAttribute('aria-hidden', 'true');
+
+    var text = document.createElement('span');
+    text.textContent = 'Reset';
+
+    btn.appendChild(arrow);
+    btn.appendChild(text);
+
+    btn.addEventListener('mouseenter', function () {
+      btn.style.background = 'rgba(255,255,255,0.06)';
+    });
+    btn.addEventListener('mouseleave', function () {
+      btn.style.background = 'transparent';
+    });
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      resetCaptionPosition(activeOverlayIndex);
+      hideCCMenu();
+    });
+
+    li.appendChild(btn);
+    return li;
+  }
+
   function showCCMenu(triggerBtn) {
     // Re-scan so the menu always reflects all currently rendered VideoWrappers,
     // even if some were added after the initial injection pass.
@@ -467,6 +577,24 @@
       margin:     '3px 0',
     });
     ul.appendChild(sep);
+
+    // Movable option
+    ul.appendChild(buildMovableItem(theme, triggerBtn));
+
+    // Reset option (only when caption has been moved)
+    if (captionMoved[activeOverlayIndex]) {
+      ul.appendChild(buildResetItem(theme));
+    }
+
+    // Separator
+    var sep2 = document.createElement('li');
+    sep2.setAttribute('role', 'separator');
+    Object.assign(sep2.style, {
+      height:     '1px',
+      background: 'rgba(255,255,255,0.1)',
+      margin:     '3px 0',
+    });
+    ul.appendChild(sep2);
 
     // Off option
     ul.appendChild(buildMenuItem(
