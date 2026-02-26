@@ -612,7 +612,7 @@
     ));
 
     ccMenu.appendChild(ul);
-    document.body.appendChild(ccMenu);
+    (document.fullscreenElement || document.body).appendChild(ccMenu);
 
     // Prevent menu from going off-screen to the right
     var menuRect = ccMenu.getBoundingClientRect();
