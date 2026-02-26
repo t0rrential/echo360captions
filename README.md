@@ -7,14 +7,14 @@ takes the transcript and turns it into closed captioning under a video feed.
 ### 1. clone this repo
 
 ```
-git clone https://github.com/t0rrential/360transcript.git
+git clone https://github.com/t0rrential/echo360captions.git
 ```
 
 ### 2. load it into chrome
 
 go to `chrome://extensions/` and then enable developer mode at the top right.
 
-next, click the `Load Unpacked` button and then select the `360transcript` folder.
+next, click the `Load Unpacked` button and then select the `echo360captions` folder.
 
 ### 3. enjoy!
 
