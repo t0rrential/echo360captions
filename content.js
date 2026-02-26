@@ -4,6 +4,8 @@
   let userChose = false;        // true when user explicitly picked a feed from the menu
   const overlays = [];
   let ccMenu = null;
+  let isMovable = false;          // true = captions can be dragged
+  const captionMoved = [];        // captionMoved[i] = true if overlay i was dragged from default
 
   // ── 0. Warn if no transcript arrives within 10 seconds ────────────────────
   const transcriptTimeout = setTimeout(function () {
@@ -110,6 +112,92 @@
     activeOverlayIndex = index;
     var btn = document.getElementById('echo360-cc-btn');
     if (btn) updateCCButton(btn);
+  }
+
+  // ── 6b. Movable helpers ─────────────────────────────────────────────────────
+  function enableMovable(overlay) {
+    if (!overlay) return;
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.cursor = 'grab';
+    if (!overlay._dragHandler) {
+      overlay._dragHandler = function (e) { startDrag(overlay, e); };
+    }
+    overlay.addEventListener('mousedown', overlay._dragHandler);
+  }
+
+  function disableMovable(overlay) {
+    if (!overlay) return;
+    overlay.style.pointerEvents = 'none';
+    overlay.style.cursor = '';
+    if (overlay._dragHandler) {
+      overlay.removeEventListener('mousedown', overlay._dragHandler);
+    }
+  }
+
+  function startDrag(overlay, e) {
+    if (e.button !== 0) return;   // left-click only
+    e.preventDefault();
+    e.stopPropagation();
+
+    var container = overlay.parentElement;  // .echo360-caption-container
+    var containerRect = container.getBoundingClientRect();
+    var overlayRect   = overlay.getBoundingClientRect();
+
+    // Current top-left of overlay relative to container
+    var startX = overlayRect.left - containerRect.left;
+    var startY = overlayRect.top  - containerRect.top;
+
+    // Switch from bottom/%/transform to explicit top/left px
+    overlay.style.bottom    = '';
+    overlay.style.transform = '';
+    overlay.style.left      = startX + 'px';
+    overlay.style.top       = startY + 'px';
+    overlay.style.cursor    = 'grabbing';
+
+    var startMouseX = e.clientX;
+    var startMouseY = e.clientY;
+    var overlayW    = overlayRect.width;
+    var overlayH    = overlayRect.height;
+
+    function onMove(ev) {
+      var dx = ev.clientX - startMouseX;
+      var dy = ev.clientY - startMouseY;
+      var newX = startX + dx;
+      var newY = startY + dy;
+
+      // Clamp inside container
+      var maxX = containerRect.width  - overlayW;
+      var maxY = containerRect.height - overlayH;
+      newX = Math.max(0, Math.min(newX, maxX));
+      newY = Math.max(0, Math.min(newY, maxY));
+
+      overlay.style.left = newX + 'px';
+      overlay.style.top  = newY + 'px';
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      overlay.style.cursor = 'grab';
+
+      var idx = overlays.indexOf(overlay);
+      if (idx !== -1) {
+        captionMoved[idx] = true;
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  }
+
+  function resetCaptionPosition(overlayIndex) {
+    var overlay = overlays[overlayIndex];
+    if (!overlay) return;
+    overlay.style.bottom    = '8%';
+    overlay.style.left      = '50%';
+    overlay.style.top       = '';
+    overlay.style.transform = 'translateX(-50%)';
+    captionMoved[overlayIndex] = false;
   }
 
   // ── 7. Inject caption container + overlay into a VideoWrapper ───────────────
