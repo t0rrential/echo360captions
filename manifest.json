@@ -1,13 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Echo360 Captions",
-  "version": "1.0",
+  "version": "1.18",
   "description": "Adds synchronized captions to Echo360 video lectures.",
   "content_scripts": [
     {
       "matches": [
         "https://echo360.org/lesson/*",
-        "https://echo360.org/section/*/classroom*"
+        "https://echo360.org/section/*/classroom*",
+        "https://echo360.org.uk/lesson/*",
+        "https://echo360.org.uk/section/*/classroom*"
       ],
       "js": ["injected.js"],
       "run_at": "document_start",
@@ -16,7 +18,9 @@
     {
       "matches": [
         "https://echo360.org/lesson/*",
-        "https://echo360.org/section/*/classroom*"
+        "https://echo360.org/section/*/classroom*",
+        "https://echo360.org.uk/lesson/*",
+        "https://echo360.org.uk/section/*/classroom*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
