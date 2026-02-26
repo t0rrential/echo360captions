@@ -117,11 +117,10 @@
   // ── 6b. Movable helpers ─────────────────────────────────────────────────────
   function enableMovable(overlay) {
     if (!overlay) return;
+    if (overlay._dragHandler) return;   // already enabled — don't add a second listener
     overlay.style.pointerEvents = 'auto';
     overlay.style.cursor = 'grab';
-    if (!overlay._dragHandler) {
-      overlay._dragHandler = function (e) { startDrag(overlay, e); };
-    }
+    overlay._dragHandler = function (e) { startDrag(overlay, e); };
     overlay.addEventListener('mousedown', overlay._dragHandler);
   }
 
@@ -140,6 +139,7 @@
     e.stopPropagation();
 
     var container = overlay.parentElement;  // .echo360-caption-container
+    if (!container) return;
     var containerRect = container.getBoundingClientRect();
     var overlayRect   = overlay.getBoundingClientRect();
 
@@ -159,7 +159,10 @@
     var overlayW    = overlayRect.width;
     var overlayH    = overlayRect.height;
 
+    var hasMoved = false;
+
     function onMove(ev) {
+      hasMoved = true;
       var dx = ev.clientX - startMouseX;
       var dy = ev.clientY - startMouseY;
       var newX = startX + dx;
@@ -180,9 +183,19 @@
       document.removeEventListener('mouseup',   onUp);
       overlay.style.cursor = 'grab';
 
-      var idx = overlays.indexOf(overlay);
-      if (idx !== -1) {
-        captionMoved[idx] = true;
+      if (hasMoved) {
+        var idx = overlays.indexOf(overlay);
+        if (idx !== -1) {
+          captionMoved[idx] = true;
+        }
+      } else {
+        // Bare click with no drag: revert the coordinate-system switch
+        // so the overlay stays at its CSS default (bottom/transform)
+        // instead of a px equivalent.
+        overlay.style.bottom    = '8%';
+        overlay.style.left      = '50%';
+        overlay.style.top       = '';
+        overlay.style.transform = 'translateX(-50%)';
       }
     }
 
