@@ -130,6 +130,7 @@
     overlay.style.cursor = '';
     if (overlay._dragHandler) {
       overlay.removeEventListener('mousedown', overlay._dragHandler);
+      overlay._dragHandler = null;
     }
   }
 
@@ -418,6 +419,7 @@
 
     var btn = document.createElement('button');
     btn.setAttribute('role', 'menuitem');
+    btn.setAttribute('aria-pressed', String(isMovable));
     btn.type = 'button';
     Object.assign(btn.style, {
       display:        'flex',
