@@ -18,4 +18,4 @@ next, click the `Load Unpacked` button and then select the `360transcript` folde
 
 ### 3. enjoy!
 
-you should be able to see transcripts on echo360 now. they will show up under a video feed after you enable it in the video player. if there is more than one video feed, after enabling closed captioning, you can click on it again to switch what video feed the caption appears under.
+you should be able to see transcripts on echo360 now. they will show up under a video feed after you enable it in the video player. you can also switch where the captions appear if your video feed supports multiple views at a time.
